@@ -1,2 +1,3 @@
 # 2025_PBA_final_project
-2025 PBA final project for team 14.
+2025 PBA final project for team 14. 
+Sort: data analysis.
