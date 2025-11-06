@@ -1,0 +1,60 @@
+---
+title: "PBA_final_project"
+author: "Yu-Cheng Chou"
+date: "2025-11-03"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+setwd("/Users/hankchou/Documents/NTHU/2025_1/programming in business/final project/test_1103/archive/")
+getwd()
+require(readr)
+require(dplyr)
+require(ggplot2)
+```
+```{r dataset}
+user_logs = read_csv("users.csv")
+head(user_logs)
+movies = read_csv("movies.csv")
+watch_history_logs = read_csv("watch_history.csv")
+recommendation_logs = read_csv("recommendation_logs.csv")
+```
+
+```{r plot }
+movies %>%
+  group_by(genre_primary) %>%
+  mutate(median_duration = median(duration_minutes, na.rm = TRUE)) %>%
+  ungroup() %>%
+  ggplot(aes(x = reorder(genre_primary, median_duration), 
+             y = duration_minutes, fill = genre_primary)) +
+  geom_boxplot(show.legend = FALSE, outlier.alpha = 0.3) +
+  coord_flip() +  # 橫向排列更好閱讀
+  labs(
+    title = "Average Duration by Genre",
+    subtitle = "Genres sorted by median viewing duration",
+    x = "Genre", y = "Duration (minutes)",
+    caption = "Data source: movies.csv"
+  ) +
+  theme_minimal(base_size = 13)
+```
+
+```{r plot test 2}
+movies %>%
+  group_by(genre_primary) %>%
+  summarize(mean_duration = mean(duration_minutes, na.rm = TRUE),
+            sd_duration = sd(duration_minutes, na.rm = TRUE)) %>%
+  ggplot(aes(x = reorder(genre_primary, mean_duration), 
+             y = mean_duration)) +
+  geom_point(size = 3, color = "steelblue") +
+  geom_errorbar(aes(ymin = mean_duration - sd_duration,
+                    ymax = mean_duration + sd_duration), width = 0.2) +
+  coord_flip() +
+  labs(
+    title = "Average Duration by Genre (with SD)",
+    subtitle = "Mean ± standard deviation",
+    x = "Genre", y = "Average Duration (minutes)",
+    caption = "Data source: movies.csv"
+  ) +
+  theme_minimal(base_size = 13)
+```
