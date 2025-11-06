@@ -7,18 +7,18 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-setwd("/Users/hankchou/Documents/NTHU/2025_1/programming in business/final project/test_1103/archive/")
+setwd("/Users/hankchou/Documents/NTHU/2025_1/programming in business/final project/test_1103")
 getwd()
 require(readr)
 require(dplyr)
 require(ggplot2)
 ```
 ```{r dataset}
-user_logs = read_csv("users.csv")
+user_logs = read_csv("./archive/users.csv")
 head(user_logs)
-movies = read_csv("movies.csv")
-watch_history_logs = read_csv("watch_history.csv")
-recommendation_logs = read_csv("recommendation_logs.csv")
+movies = read_csv("./archive/movies.csv")
+watch_history_logs = read_csv("./archive/watch_history.csv")
+recommendation_logs = read_csv("./archive/recommendation_logs.csv")
 ```
 
 ```{r plot }
