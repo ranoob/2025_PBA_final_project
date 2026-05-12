@@ -1,0 +1,124 @@
+---
+title: "TW_comp_bankruptcy_roject"
+author: "Yu-Cheng Chou"
+date: "2025-12-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+require(dplyr)
+require(tidyverse)
+require(infer)
+require(ggplot2)
+require(readr)
+```
+
+```{r data}
+df_inni = read_csv("./data/taiwanese_bankruptcy_prediction.csv")
+```
+```{r bankruptcy_rate_plot}
+target <- "Bankrupt?"   # 你的目標欄名
+y <- df_inni[[target]]
+X_names <- setdiff(names(df), target)
+
+# Fig 1: class distribution
+df_inni %>%
+  count(.data[[target]]) %>%
+  mutate(pct = n/sum(n)) %>%
+  ggplot(aes(x = factor(.data[[target]]), y = n)) +
+  geom_col() +
+  geom_text(aes(label = paste0(n, "\n(", scales::percent(pct, 0.01), ")")),
+            vjust = -0.2) +
+  labs(x="Bankrupt (0/1)", y="Count", title="Class distribution")
+```
+```{r plot_2}
+target <- "Bankrupt?"  # 目標欄名（保持原樣，不用改）
+
+# 你自己指定要畫的 4 個變數（把下面四個換成你資料裡的欄名）
+vars <- c(
+  "Net Income to Total Assets",
+  "ROA(A) before interest and % after tax",
+  "Debt ratio %",
+  "Working Capital to Total Assets"
+)
+
+plot_density_overlay <- function(df_inni, target, v, fig_no){
+  p <- df_inni %>%
+    ggplot(aes(x = .data[[v]], fill = factor(.data[[target]]))) +
+    geom_density(alpha = 0.45, na.rm = TRUE) +
+    labs(
+      title = paste0("Fig ", fig_no, ". Distribution: ", v),
+      x = v,
+      fill = "Bankrupt (0/1)"
+    ) +
+    theme(legend.position = "top")
+}
+
+fig2 <- plot_density_overlay(df_inni, target, vars[1], 2)
+fig3 <- plot_density_overlay(df_inni, target, vars[2], 3)
+fig4 <- plot_density_overlay(df_inni, target, vars[3], 4)
+fig5 <- plot_density_overlay(df_inni, target, vars[4], 5)
+
+fig2; fig3; fig4; fig5
+
+```
+```{r plot6}
+# 用你現在的 df_inni
+df <- df_inni
+target <- "Bankrupt?"
+
+stopifnot(target %in% names(df))
+
+y <- df[[target]]
+if (!is.numeric(y)) y <- as.numeric(as.character(y))
+
+# 只保留 numeric 特徵
+X <- df %>%
+  select(-all_of(target)) %>%
+  select(where(is.numeric))
+
+# 去掉全 NA、或零變異的欄
+X <- X %>%
+  select(where(~ sum(!is.na(.x)) > 2)) %>%
+  select(where(~ sd(.x, na.rm = TRUE) > 0))
+
+if (ncol(X) == 0) stop("X has 0 numeric columns after filtering (all non-numeric / all NA / zero variance).")
+if (nrow(X) == 0) stop("X has 0 rows (df might have been filtered to empty).")
+
+# 與 target 的相關（用 pairwise.complete.obs，比 complete.obs 更不容易全 NA）
+corr_y <- map_dbl(names(X), function(v){
+  suppressWarnings(cor(X[[v]], y, use = "pairwise.complete.obs"))
+})
+
+# 移除 NA correlations
+corr_y <- corr_y[!is.na(corr_y)]
+if (length(corr_y) < 2) stop("Too few usable features: correlations are mostly NA.")
+
+k <- min(25, length(corr_y))
+top_vars <- names(sort(abs(corr_y), decreasing = TRUE))[1:k]
+
+# 相關矩陣（這裡不會空）
+corr_mat <- cor(X %>% select(all_of(top_vars)), use = "pairwise.complete.obs")
+
+corr_df <- as.data.frame(as.table(corr_mat)) %>%
+  rename(var1 = Var1, var2 = Var2, corr = Freq)
+
+fig6 <- ggplot(corr_df, aes(x = var1, y = var2, fill = corr)) +
+  geom_tile() +
+  labs(
+    title = "Fig 6. Correlation heatmap (Top features by |corr with target|)",
+    x = NULL, y = NULL
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    axis.text.x = element_text(angle = 90, hjust = 1, size = 7),
+    axis.text.y = element_text(size = 7)
+  )
+
+ggsave("Fig6_corr_heatmap_top25.png", fig6, width = 9, height = 7, dpi = 200)
+fig6
+
+head()
+```
